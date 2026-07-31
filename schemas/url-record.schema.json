@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.local/schemas/url-record.schema.json",
+  "title": "ShortUrlRecord",
+  "type": "object",
+  "required": [
+    "code",
+    "destinationUrl",
+    "createdAt",
+    "accessCount",
+    "active",
+    "recentAccesses"
+  ],
+  "properties": {
+    "code": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{1,32}$"
+    },
+    "destinationUrl": {
+      "type": "string",
+      "format": "uri"
+    },
+    "title": {
+      "type": ["string", "null"]
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "expiresAt": {
+      "type": ["string", "null"],
+      "format": "date-time"
+    },
+    "accessCount": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "lastAccessedAt": {
+      "type": ["string", "null"],
+      "format": "date-time"
+    },
+    "active": {
+      "type": "boolean"
+    },
+    "recentAccesses": {
+      "type": "array",
+      "maxItems": 10,
+      "items": {
+        "$ref": "#/$defs/accessEvent"
+      }
+    }
+  },
+  "$defs": {
+    "accessEvent": {
+      "type": "object",
+      "required": ["accessedAt"],
+      "properties": {
+        "accessedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "userAgent": {
+          "type": ["string", "null"]
+        },
+        "referer": {
+          "type": ["string", "null"]
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}
