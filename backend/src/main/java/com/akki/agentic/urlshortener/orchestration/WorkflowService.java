@@ -367,7 +367,7 @@ public class WorkflowService {
 		}
 	}
 
-	private WorkflowState executeNode(WorkflowNode node, WorkflowState state) {
+	private WorkflowNode executeNode(WorkflowNode node, WorkflowState state) {
 		Instant now = Instant.now(clock);
 		if (node.type() == NodeType.SECURITY && containsUnsafeDirective(state.requirement())) {
 			throw new UnsafeWorkflowException("Security policy guardrail triggered for unsafe requirement content");
