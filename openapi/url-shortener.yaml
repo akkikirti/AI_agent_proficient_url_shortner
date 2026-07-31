@@ -1,0 +1,383 @@
+openapi: 3.0.3
+info:
+  title: Agentic URL Shortener API
+  version: 1.0.0
+  description: Product and orchestration API for the agentic URL shortener prototype.
+servers:
+  - url: http://localhost:8080
+paths:
+  /api/urls:
+    get:
+      summary: List short URLs
+      responses:
+        '200':
+          description: URL list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UrlCollectionResponse'
+    post:
+      summary: Create short URL
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateShortUrlRequest'
+      responses:
+        '201':
+          description: URL created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortUrlResponse'
+  /api/urls/{code}/analytics:
+    get:
+      summary: Get URL analytics
+      parameters:
+        - in: path
+          name: code
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Analytics payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UrlAnalyticsResponse'
+  /api/urls/{code}:
+    delete:
+      summary: Deactivate short URL
+      parameters:
+        - in: path
+          name: code
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Updated short URL state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortUrlResponse'
+  /r/{code}:
+    get:
+      summary: Redirect to destination URL
+      parameters:
+        - in: path
+          name: code
+          required: true
+          schema:
+            type: string
+      responses:
+        '302':
+          description: Redirect response
+  /api/orchestrator/workflows:
+    get:
+      summary: List workflows
+      responses:
+        '200':
+          description: Workflow summaries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WorkflowSummary'
+    post:
+      summary: Create workflow
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWorkflowRequest'
+      responses:
+        '201':
+          description: Workflow created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowState'
+  /api/orchestrator/workflows/{workflowId}:
+    get:
+      summary: Get workflow state
+      parameters:
+        - in: path
+          name: workflowId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Workflow state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowState'
+  /api/orchestrator/workflows/{workflowId}/execute:
+    post:
+      summary: Execute workflow
+      parameters:
+        - in: path
+          name: workflowId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExecuteWorkflowRequest'
+      responses:
+        '200':
+          description: Updated workflow state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowState'
+  /api/orchestrator/workflows/{workflowId}/approvals/{gateId}:
+    post:
+      summary: Submit approval decision
+      parameters:
+        - in: path
+          name: workflowId
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: gateId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApprovalRequest'
+      responses:
+        '200':
+          description: Updated workflow state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowState'
+  /api/orchestrator/workflows/{workflowId}/replan:
+    post:
+      summary: Replan workflow
+      parameters:
+        - in: path
+          name: workflowId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReplanWorkflowRequest'
+      responses:
+        '200':
+          description: Updated workflow state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowState'
+  /api/orchestrator/workflows/{workflowId}/rollback:
+    post:
+      summary: Roll back workflow
+      parameters:
+        - in: path
+          name: workflowId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RollbackWorkflowRequest'
+      responses:
+        '200':
+          description: Rolled-back workflow state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowState'
+components:
+  schemas:
+    CreateShortUrlRequest:
+      type: object
+      required: [destinationUrl]
+      properties:
+        destinationUrl:
+          type: string
+          format: uri
+        alias:
+          type: string
+        title:
+          type: string
+        expiresAt:
+          type: string
+          format: date-time
+    ShortUrlResponse:
+      type: object
+      properties:
+        code: { type: string }
+        shortUrl: { type: string }
+        destinationUrl: { type: string, format: uri }
+        title: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+        expiresAt: { type: string, format: date-time, nullable: true }
+        accessCount: { type: integer, format: int64 }
+        active: { type: boolean }
+    UrlCollectionResponse:
+      type: object
+      properties:
+        urls:
+          type: array
+          items:
+            $ref: '#/components/schemas/ShortUrlResponse'
+    AccessEvent:
+      type: object
+      properties:
+        accessedAt: { type: string, format: date-time }
+        userAgent: { type: string, nullable: true }
+        referer: { type: string, nullable: true }
+    UrlAnalyticsResponse:
+      type: object
+      properties:
+        code: { type: string }
+        destinationUrl: { type: string, format: uri }
+        title: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+        expiresAt: { type: string, format: date-time, nullable: true }
+        accessCount: { type: integer, format: int64 }
+        lastAccessedAt: { type: string, format: date-time, nullable: true }
+        active: { type: boolean }
+        expired: { type: boolean }
+        recentAccesses:
+          type: array
+          items:
+            $ref: '#/components/schemas/AccessEvent'
+    CreateWorkflowRequest:
+      type: object
+      required: [projectName, requirement, scenario]
+      properties:
+        projectName: { type: string }
+        requirement: { type: string }
+        scenario:
+          type: string
+          enum: [GREENFIELD, BROWNFIELD, AMBIGUOUS]
+        constraints:
+          type: array
+          items: { type: string }
+        acceptanceCriteria:
+          type: array
+          items: { type: string }
+    ExecuteWorkflowRequest:
+      type: object
+      properties:
+        failOnceNodeIds:
+          type: array
+          items: { type: string }
+    ApprovalRequest:
+      type: object
+      required: [approver]
+      properties:
+        approver: { type: string }
+        approved: { type: boolean }
+        notes: { type: string }
+    ReplanWorkflowRequest:
+      type: object
+      properties:
+        changedNodeIds:
+          type: array
+          items: { type: string }
+        reason: { type: string }
+        updatedRequirement: { type: string }
+    RollbackWorkflowRequest:
+      type: object
+      properties:
+        reason: { type: string }
+    WorkflowSummary:
+      type: object
+      properties:
+        id: { type: string }
+        projectName: { type: string }
+        scenario: { type: string }
+        status: { type: string }
+        updatedAt: { type: string, format: date-time }
+        completedNodes: { type: integer }
+        totalNodes: { type: integer }
+    WorkflowNode:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        type: { type: string }
+        dependsOn:
+          type: array
+          items: { type: string }
+        approvalRequired: { type: boolean }
+        status: { type: string }
+        retryCount: { type: integer }
+        maxRetries: { type: integer }
+        assignedAgent: { type: string }
+        summary: { type: string }
+        artifacts:
+          type: array
+          items: { type: string }
+        risks:
+          type: array
+          items: { type: string }
+    ApprovalGate:
+      type: object
+      properties:
+        id: { type: string }
+        nodeId: { type: string }
+        title: { type: string }
+        approved: { type: boolean }
+        rejected: { type: boolean }
+        approver: { type: string, nullable: true }
+        decidedAt: { type: string, format: date-time, nullable: true }
+        notes: { type: string, nullable: true }
+    DecisionRecord:
+      type: object
+      properties:
+        id: { type: string }
+        agent: { type: string }
+        input: { type: string }
+        output: { type: string }
+        reasoning: { type: string }
+        engineerDecision: { type: string }
+        approvalStatus: { type: string }
+        repositoryReference: { type: string }
+        createdAt: { type: string, format: date-time }
+    WorkflowState:
+      type: object
+      properties:
+        id: { type: string }
+        projectName: { type: string }
+        requirement: { type: string }
+        scenario: { type: string }
+        status: { type: string }
+        approvals:
+          type: array
+          items:
+            $ref: '#/components/schemas/ApprovalGate'
+        nodes:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkflowNode'
+        decisions:
+          type: array
+          items:
+            $ref: '#/components/schemas/DecisionRecord'
+        artifactIndex:
+          type: array
+          items: { type: string }
