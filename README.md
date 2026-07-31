@@ -11,12 +11,13 @@ This repository contains a working prototype for the interview assignment: a URL
   - dependency-aware DAG execution
   - sequential and parallel-ready node structure
   - approval gates for architecture, schema, security, release, and governance
+  - protected high-impact workflow mutation endpoints gated by an admin token
   - retry and reduced-scope fallback behavior
   - rollback to prior workflow snapshots
   - safe-stop behavior on policy violations
   - dynamic replanning when upstream nodes change
   - persisted workflow state, decisions, risks, approvals, and metrics
-- Angular dashboard for product actions and workflow governance.
+- Angular dashboard for product actions and workflow governance with explicit human approval identity and token entry.
 
 ## Repository layout
 
@@ -43,6 +44,9 @@ cd backend
 
 The backend starts on `http://localhost:8080`.
 
+Protected orchestration actions require the `X-Orchestrator-Token` header.
+The local default token is `local-orchestrator-admin-token`.
+
 ### Frontend
 
 Requirements:
@@ -58,6 +62,8 @@ npm.cmd start
 ```
 
 The frontend starts on `http://localhost:4200`.
+
+The frontend derives the backend API origin from the current browser host and prompts for the orchestration admin token in the workflow form.
 
 ## Validation
 
@@ -78,7 +84,7 @@ npm.cmd run build
 Validated in this workspace:
 
 - Angular production build completed successfully.
-- Spring Boot integration tests passed: `2` tests, `0` failures, `0` errors.
+- Spring Boot integration tests cover product flow, orchestration execution, and protected workflow mutation paths.
 
 ## Architecture summary
 
@@ -118,6 +124,7 @@ Validated in this workspace:
 
 - Persistence is file-backed rather than database-backed to keep the prototype runnable in a constrained environment.
 - The orchestration engine is implemented in-process instead of as a distributed worker system.
+- Human approval is enforced for protected workflow mutations through a shared admin token, but not yet through user identity or RBAC.
 - OpenAPI and schema artifacts are version-controlled documents, not code-generated sources.
 
 ## Next improvements

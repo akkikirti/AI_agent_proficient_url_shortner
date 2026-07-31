@@ -25,6 +25,7 @@ The orchestration layer must expose enough operational detail for a reviewer to 
 - workflow state transitions
 - node retries
 - approval gate decisions
+- protected endpoint authorization failures
 - fallback decision records
 - rollback transitions
 

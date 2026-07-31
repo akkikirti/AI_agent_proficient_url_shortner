@@ -18,6 +18,7 @@ This matrix defines where autonomous execution must pause for human oversight in
 ## Decision recording rules
 
 - Every decision must capture approver, timestamp, notes, and resulting state.
+- Protected workflow mutations require the orchestration admin token before a human decision can be recorded.
 - Rejections transition the workflow into `SAFE_STOPPED` until a human decides whether to replan or abandon the run.
 - Approvals are persisted in the workflow state file and surfaced through the orchestration API.
 
@@ -31,5 +32,5 @@ This matrix defines where autonomous execution must pause for human oversight in
 ## Ownership model
 
 - Agents generate artifacts and recommendations.
-- Humans approve high-impact transitions.
+- Humans approve high-impact transitions, and the API rejects protected operations that do not present the configured admin token.
 - Final quality signoff stays with the reviewer, not the agent.

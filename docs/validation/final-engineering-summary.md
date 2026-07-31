@@ -21,7 +21,7 @@ The critical differentiator in the assignment is not the URL shortener itself. I
 
 ## Validation results
 
-- Backend integration tests passed.
+- Backend integration suite covers product flow, guarded orchestration mutations, retries, replanning, rollback, and safe-stop behavior.
 - Frontend production build passed.
 - API contract documented in `openapi/url-shortener.yaml`.
 - Persistence schema documented in `schemas/url-record.schema.json`.
@@ -36,13 +36,13 @@ The critical differentiator in the assignment is not the URL shortener itself. I
 
 ### Security risks
 
-- No authentication or authorization layer is implemented.
-- Approval identity is recorded as plain input rather than a verified principal.
+- Protected orchestration mutations rely on a shared admin token rather than full user authentication.
+- Approval identity is captured explicitly but is not yet backed by RBAC or external identity.
 
 ### Operational risks
 
 - Workflow state files can grow over time if snapshots are retained indefinitely.
-- Frontend assumes local backend reachability at `http://localhost:8080`.
+- The frontend derives the backend port from the current browser host but still assumes a colocated development deployment model.
 
 ### Business risks
 
@@ -54,13 +54,13 @@ The critical differentiator in the assignment is not the URL shortener itself. I
 ### Ready for prototype evaluation
 
 - Runnable backend and frontend
-- Integration coverage for core product and orchestration flows
+- Integration coverage for core product, protected orchestration, and failure-path flows
 - Incremental git history showing stepwise delivery
 - Traceable architecture and contract artifacts
 
 ### Not yet production-ready
 
-- No user authentication
+- No user authentication or role-based authorization
 - No durable relational or distributed storage
 - No asynchronous agent workers or queueing
 - No external monitoring backend
@@ -71,6 +71,7 @@ The critical differentiator in the assignment is not the URL shortener itself. I
 - Workflow agents are simulated through deterministic service logic instead of separate agent processes.
 - Observability metrics are lightweight derived values, not real telemetry streams.
 - Browser e2e coverage is not included.
+- The current shared admin token is a transitional control, not a final production identity model.
 - OpenAPI is maintained manually.
 
 ## Future roadmap
