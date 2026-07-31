@@ -1,0 +1,61 @@
+{
+  "workflowName": "agentic-url-shortener-prototype",
+  "description": "Dependency-aware SDLC execution graph for the URL shortener prototype.",
+  "nodeTypes": [
+    "REQUIREMENT",
+    "AMBIGUITY",
+    "DECOMPOSITION",
+    "ARCHITECTURE",
+    "API_SCHEMA",
+    "GREENFIELD",
+    "BROWNFIELD",
+    "IMPLEMENTATION",
+    "TESTING",
+    "DOCUMENTATION",
+    "SECURITY",
+    "PERFORMANCE",
+    "RELIABILITY",
+    "RELEASE",
+    "GOVERNANCE",
+    "AUDIT",
+    "FINAL_SUMMARY"
+  ],
+  "approvalRequired": [
+    "architecture",
+    "api-schema",
+    "brownfield",
+    "security",
+    "release",
+    "governance"
+  ],
+  "nodes": [
+    { "id": "requirements", "dependsOn": [] },
+    { "id": "ambiguity", "dependsOn": ["requirements"] },
+    { "id": "decomposition", "dependsOn": ["requirements"] },
+    { "id": "architecture", "dependsOn": ["requirements", "decomposition"] },
+    { "id": "api-schema", "dependsOn": ["architecture"] },
+    { "id": "greenfield", "dependsOn": ["api-schema"] },
+    { "id": "brownfield", "dependsOn": ["api-schema"] },
+    { "id": "implementation", "dependsOn": ["greenfield", "brownfield", "ambiguity"] },
+    { "id": "testing", "dependsOn": ["implementation"] },
+    { "id": "documentation", "dependsOn": ["implementation"] },
+    { "id": "security", "dependsOn": ["testing"] },
+    { "id": "performance", "dependsOn": ["testing"] },
+    { "id": "reliability", "dependsOn": ["testing"] },
+    { "id": "release", "dependsOn": ["documentation", "security", "performance", "reliability"] },
+    { "id": "governance", "dependsOn": ["release"] },
+    { "id": "audit", "dependsOn": ["governance"] },
+    { "id": "final-summary", "dependsOn": ["audit"] }
+  ],
+  "controlPolicies": {
+    "maxRetries": 3,
+    "fallbackMode": "reduced-scope-completion",
+    "rollbackMode": "restore-last-snapshot",
+    "safeStopTriggers": [
+      "security-risk",
+      "approval-rejected",
+      "unsafe-requirement",
+      "critical-dependency-failure"
+    ]
+  }
+}
