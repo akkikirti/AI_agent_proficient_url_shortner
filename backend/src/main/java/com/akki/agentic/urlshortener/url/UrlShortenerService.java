@@ -39,20 +39,15 @@ public class UrlShortenerService {
 
 	private final ApplicationProperties properties;
 	private final ObjectMapper objectMapper;
-	private final Clock clock;
+	private final Clock clock = Clock.systemUTC();
 	private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
 	private final Map<String, ShortUrl> urlsByCode = new LinkedHashMap<>();
 
 	private Path storagePath;
 
 	public UrlShortenerService(ApplicationProperties properties, ObjectMapper objectMapper) {
-		this(properties, objectMapper, Clock.systemUTC());
-	}
-
-	UrlShortenerService(ApplicationProperties properties, ObjectMapper objectMapper, Clock clock) {
 		this.properties = properties;
 		this.objectMapper = objectMapper;
-		this.clock = clock;
 	}
 
 	@PostConstruct
