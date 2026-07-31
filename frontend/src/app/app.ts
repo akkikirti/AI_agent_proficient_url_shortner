@@ -1,5 +1,5 @@
 import { DatePipe, NgFor, NgIf } from '@angular/common';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
@@ -190,6 +190,14 @@ interface WorkflowSummary {
               Requirement
               <textarea [(ngModel)]="workflowForm.requirement" name="requirement" rows="4"></textarea>
             </label>
+            <label>
+              Admin token
+              <input [(ngModel)]="workflowSecurity.adminToken" name="adminToken" placeholder="Enter orchestrator admin token" required />
+            </label>
+            <label>
+              Approver identity
+              <input [(ngModel)]="workflowSecurity.approver" name="approver" placeholder="human-reviewer" required />
+            </label>
             <button type="submit">Create workflow</button>
           </form>
           <p class="message" *ngIf="workflowMessage()">{{ workflowMessage() }}</p>
@@ -323,6 +331,7 @@ interface WorkflowSummary {
 })
 export class App {
   private readonly http = inject(HttpClient);
+  private readonly apiBaseUrl = `${window.location.protocol}//${window.location.hostname}:8080`;
   protected readonly urls = signal<ShortUrlResponse[]>([]);
   protected readonly workflows = signal<WorkflowSummary[]>([]);
   protected readonly selectedAnalytics = signal<UrlAnalyticsResponse | null>(null);
@@ -346,13 +355,18 @@ export class App {
       'Build a production-oriented URL shortener with analytics and a governed orchestration layer that supports approvals, retries, fallback, rollback, safe-stop, and dynamic replanning.',
   };
 
+  protected readonly workflowSecurity = {
+    adminToken: 'local-orchestrator-admin-token',
+    approver: 'human-reviewer',
+  };
+
   constructor() {
     this.refreshUrls();
     this.refreshWorkflows();
   }
 
   protected createUrl(): void {
-    this.http.post<ShortUrlResponse>('http://localhost:8080/api/urls', this.urlForm).subscribe({
+    this.http.post<ShortUrlResponse>(`${this.apiBaseUrl}/api/urls`, this.urlForm).subscribe({
       next: (response) => {
         this.urlMessage.set(`Created ${response.shortUrl}`);
         this.urlForm.alias = '';
@@ -369,24 +383,24 @@ export class App {
       acceptanceCriteria: ['Runnable prototype', 'Governed orchestration', 'Incremental commits'],
     };
 
-    this.http.post<WorkflowState>('http://localhost:8080/api/orchestrator/workflows', payload).subscribe({
+    this.http.post<WorkflowState>(`${this.apiBaseUrl}/api/orchestrator/workflows`, payload, { headers: this.orchestratorHeaders() }).subscribe({
       next: (workflow) => {
         this.workflowMessage.set(`Created workflow ${workflow.id}`);
         this.selectedWorkflow.set(workflow);
         this.refreshWorkflows(workflow.id);
       },
-      error: (error) => this.workflowMessage.set(error.error?.message ?? 'Unable to create workflow.'),
+      error: (error) => this.workflowMessage.set(error.error?.message ?? 'Unable to create workflow. Check the admin token and request payload.'),
     });
   }
 
   protected loadAnalytics(code: string): void {
-    this.http.get<UrlAnalyticsResponse>(`http://localhost:8080/api/urls/${code}/analytics`).subscribe({
+    this.http.get<UrlAnalyticsResponse>(`${this.apiBaseUrl}/api/urls/${code}/analytics`).subscribe({
       next: (analytics) => this.selectedAnalytics.set(analytics),
     });
   }
 
   protected selectWorkflow(workflowId: string): void {
-    this.http.get<WorkflowState>(`http://localhost:8080/api/orchestrator/workflows/${workflowId}`).subscribe({
+    this.http.get<WorkflowState>(`${this.apiBaseUrl}/api/orchestrator/workflows/${workflowId}`).subscribe({
       next: (workflow) => this.selectedWorkflow.set(workflow),
     });
   }
@@ -398,12 +412,13 @@ export class App {
     }
 
     this.http
-      .post<WorkflowState>(`http://localhost:8080/api/orchestrator/workflows/${workflow.id}/execute`, { failOnceNodeIds: ['testing'] })
+      .post<WorkflowState>(`${this.apiBaseUrl}/api/orchestrator/workflows/${workflow.id}/execute`, { failOnceNodeIds: ['testing'] }, { headers: this.orchestratorHeaders() })
       .subscribe({
         next: (updated) => {
           this.selectedWorkflow.set(updated);
           this.refreshWorkflows(updated.id);
         },
+        error: (error) => this.workflowMessage.set(error.error?.message ?? 'Unable to execute workflow.'),
       });
   }
 
@@ -421,11 +436,11 @@ export class App {
     let remaining = pending.length;
     for (const approval of pending) {
       this.http
-        .post<WorkflowState>(`http://localhost:8080/api/orchestrator/workflows/${workflow.id}/approvals/${approval.id}`, {
-          approver: 'human-reviewer',
+        .post<WorkflowState>(`${this.apiBaseUrl}/api/orchestrator/workflows/${workflow.id}/approvals/${approval.id}`, {
+          approver: this.workflowSecurity.approver,
           approved: true,
           notes: 'Approved from UI dashboard',
-        })
+        }, { headers: this.orchestratorHeaders() })
         .subscribe({
           next: (updated) => {
             remaining -= 1;
@@ -434,6 +449,7 @@ export class App {
               this.refreshWorkflows(updated.id);
             }
           },
+          error: (error) => this.workflowMessage.set(error.error?.message ?? 'Unable to approve workflow gate.'),
         });
     }
   }
@@ -445,16 +461,17 @@ export class App {
     }
 
     this.http
-      .post<WorkflowState>(`http://localhost:8080/api/orchestrator/workflows/${workflow.id}/replan`, {
+      .post<WorkflowState>(`${this.apiBaseUrl}/api/orchestrator/workflows/${workflow.id}/replan`, {
         changedNodeIds: ['architecture'],
         reason: 'Architecture review introduced an upstream design change.',
         updatedRequirement: workflow.requirement + ' Include refreshed architecture review outputs.',
-      })
+      }, { headers: this.orchestratorHeaders() })
       .subscribe({
         next: (updated) => {
           this.selectedWorkflow.set(updated);
           this.refreshWorkflows(updated.id);
         },
+        error: (error) => this.workflowMessage.set(error.error?.message ?? 'Unable to replan workflow.'),
       });
   }
 
@@ -464,11 +481,12 @@ export class App {
       return;
     }
 
-    this.http.post<WorkflowState>(`http://localhost:8080/api/orchestrator/workflows/${workflow.id}/rollback`, { reason: 'UI-triggered rollback' }).subscribe({
+    this.http.post<WorkflowState>(`${this.apiBaseUrl}/api/orchestrator/workflows/${workflow.id}/rollback`, { reason: 'UI-triggered rollback' }, { headers: this.orchestratorHeaders() }).subscribe({
       next: (updated) => {
         this.selectedWorkflow.set(updated);
         this.refreshWorkflows(updated.id);
       },
+      error: (error) => this.workflowMessage.set(error.error?.message ?? 'Unable to rollback workflow.'),
     });
   }
 
@@ -477,7 +495,7 @@ export class App {
   }
 
   private refreshUrls(selectCode?: string): void {
-    this.http.get<UrlListResponse>('http://localhost:8080/api/urls').subscribe({
+    this.http.get<UrlListResponse>(`${this.apiBaseUrl}/api/urls`).subscribe({
       next: (response) => {
         this.urls.set(response.urls);
         if (selectCode) {
@@ -488,7 +506,7 @@ export class App {
   }
 
   private refreshWorkflows(selectId?: string): void {
-    this.http.get<WorkflowSummary[]>('http://localhost:8080/api/orchestrator/workflows').subscribe({
+    this.http.get<WorkflowSummary[]>(`${this.apiBaseUrl}/api/orchestrator/workflows`).subscribe({
       next: (response) => {
         this.workflows.set(response);
         if (selectId) {
@@ -498,6 +516,12 @@ export class App {
           }
         }
       },
+    });
+  }
+
+  private orchestratorHeaders(): HttpHeaders {
+    return new HttpHeaders({
+      'X-Orchestrator-Token': this.workflowSecurity.adminToken.trim(),
     });
   }
 }

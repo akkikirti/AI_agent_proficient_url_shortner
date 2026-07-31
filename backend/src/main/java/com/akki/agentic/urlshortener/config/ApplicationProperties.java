@@ -20,6 +20,9 @@ public class ApplicationProperties {
 	@NotBlank
 	private String workflowStorageDir;
 
+	@NotBlank
+	private String orchestratorAdminToken;
+
 	@Min(1)
 	private int maxRetries = 3;
 
@@ -45,6 +48,14 @@ public class ApplicationProperties {
 
 	public void setWorkflowStorageDir(String workflowStorageDir) {
 		this.workflowStorageDir = workflowStorageDir;
+	}
+
+	public String getOrchestratorAdminToken() {
+		return orchestratorAdminToken;
+	}
+
+	public void setOrchestratorAdminToken(String orchestratorAdminToken) {
+		this.orchestratorAdminToken = orchestratorAdminToken;
 	}
 
 	public int getMaxRetries() {
