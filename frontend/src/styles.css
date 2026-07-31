@@ -1,1 +1,260 @@
-/* You can add global styles to this file, and also import other style files */
+:root {
+	--bg: #f4efe7;
+	--surface: rgba(255, 251, 245, 0.92);
+	--surface-strong: #fffaf2;
+	--ink: #132238;
+	--muted: #596579;
+	--line: rgba(19, 34, 56, 0.12);
+	--accent: #d9643a;
+	--accent-deep: #a9432f;
+	--accent-soft: #f6d7c8;
+	--success: #2f7a5f;
+	--danger: #a1362a;
+	--shadow: 0 18px 50px rgba(36, 27, 20, 0.12);
+	font-family: "Segoe UI", "Aptos", sans-serif;
+	color: var(--ink);
+}
+
+* {
+	box-sizing: border-box;
+}
+
+html,
+body {
+	margin: 0;
+	min-height: 100%;
+	background:
+		radial-gradient(circle at top left, rgba(217, 100, 58, 0.18), transparent 28%),
+		radial-gradient(circle at bottom right, rgba(19, 34, 56, 0.14), transparent 32%),
+		linear-gradient(135deg, #f9f3ea 0%, #f1ece3 48%, #e9e2d8 100%);
+}
+
+body {
+	margin: 0;
+}
+
+button,
+input,
+select,
+textarea {
+	font: inherit;
+}
+
+button {
+	cursor: pointer;
+	border: none;
+	border-radius: 999px;
+	background: var(--accent);
+	color: white;
+	padding: 0.9rem 1.15rem;
+	transition: transform 160ms ease, background 160ms ease, box-shadow 160ms ease;
+	box-shadow: 0 12px 24px rgba(217, 100, 58, 0.25);
+}
+
+button:hover {
+	background: var(--accent-deep);
+	transform: translateY(-1px);
+}
+
+button.secondary {
+	background: var(--surface-strong);
+	color: var(--ink);
+	box-shadow: inset 0 0 0 1px var(--line);
+}
+
+button.danger {
+	background: var(--danger);
+}
+
+input,
+select,
+textarea {
+	width: 100%;
+	border-radius: 18px;
+	border: 1px solid var(--line);
+	padding: 0.95rem 1rem;
+	background: rgba(255, 255, 255, 0.9);
+	color: var(--ink);
+}
+
+textarea {
+	resize: vertical;
+}
+
+.shell {
+	width: min(1200px, calc(100% - 2rem));
+	margin: 0 auto;
+	padding: 2rem 0 4rem;
+}
+
+.hero,
+.panel {
+	background: var(--surface);
+	backdrop-filter: blur(12px);
+	border: 1px solid rgba(255, 255, 255, 0.55);
+	box-shadow: var(--shadow);
+}
+
+.hero {
+	display: grid;
+	grid-template-columns: 1.8fr 1fr;
+	gap: 1.5rem;
+	border-radius: 36px;
+	padding: 2rem;
+	margin-bottom: 1.5rem;
+}
+
+.eyebrow {
+	margin: 0 0 0.75rem;
+	text-transform: uppercase;
+	letter-spacing: 0.18em;
+	font-size: 0.8rem;
+	color: var(--accent-deep);
+}
+
+.hero h1,
+.panel h2 {
+	margin: 0;
+	line-height: 1.05;
+}
+
+.hero h1 {
+	font-size: clamp(2.2rem, 6vw, 4.2rem);
+	max-width: 12ch;
+}
+
+.lede,
+.panel p,
+.message,
+.empty,
+.list-item span,
+.audit-row span,
+label {
+	color: var(--muted);
+}
+
+.hero-metrics,
+.metric-band {
+	display: grid;
+	gap: 1rem;
+}
+
+.hero-metrics article,
+.metric-band > div {
+	border-radius: 24px;
+	padding: 1rem 1.1rem;
+	background: linear-gradient(180deg, rgba(255,255,255,0.9), rgba(246,215,200,0.7));
+	border: 1px solid rgba(217, 100, 58, 0.16);
+}
+
+.hero-metrics span,
+.metric-band span {
+	display: block;
+	font-size: 0.82rem;
+	text-transform: uppercase;
+	letter-spacing: 0.12em;
+	color: var(--muted);
+}
+
+.hero-metrics strong,
+.metric-band strong {
+	display: block;
+	margin-top: 0.4rem;
+	font-size: 1.5rem;
+}
+
+.grid {
+	display: grid;
+	gap: 1.5rem;
+	margin-bottom: 1.5rem;
+}
+
+.two-up {
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.panel {
+	border-radius: 28px;
+	padding: 1.4rem;
+}
+
+.panel header {
+	margin-bottom: 1rem;
+}
+
+.stack {
+	display: grid;
+	gap: 0.95rem;
+}
+
+.stack.compact {
+	gap: 0.6rem;
+}
+
+.list {
+	display: grid;
+	gap: 0.75rem;
+}
+
+.list-item,
+.audit-row {
+	display: flex;
+	justify-content: space-between;
+	gap: 1rem;
+	align-items: center;
+	border-radius: 20px;
+	padding: 0.95rem 1rem;
+	background: var(--surface-strong);
+	border: 1px solid var(--line);
+}
+
+.list-item {
+	text-align: left;
+	width: 100%;
+	box-shadow: none;
+	color: var(--ink);
+}
+
+.list-item strong,
+.audit-row strong {
+	display: block;
+	margin-bottom: 0.25rem;
+}
+
+.pill {
+	display: inline-flex;
+	align-items: center;
+	padding: 0.35rem 0.7rem;
+	border-radius: 999px;
+	background: var(--accent-soft);
+	color: var(--accent-deep);
+	font-size: 0.85rem;
+	white-space: nowrap;
+}
+
+.actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.75rem;
+	margin-bottom: 1rem;
+}
+
+.message {
+	margin: 0.75rem 0 0;
+}
+
+.empty {
+	margin: 0;
+	padding: 1rem 0.2rem 0.2rem;
+}
+
+@media (max-width: 900px) {
+	.hero,
+	.two-up {
+		grid-template-columns: 1fr;
+	}
+
+	.hero h1 {
+		max-width: none;
+	}
+}
