@@ -29,7 +29,6 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -49,15 +48,17 @@ public class WorkflowService {
 
 	private final ApplicationProperties properties;
 	private final ObjectMapper objectMapper;
+	private final RequirementSafetyPolicy requirementSafetyPolicy;
 	private final Clock clock = Clock.systemUTC();
 	private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
 	private final Map<String, WorkflowState> workflows = new LinkedHashMap<>();
 
 	private Path workflowStorageDir;
 
-	public WorkflowService(ApplicationProperties properties, ObjectMapper objectMapper) {
+	public WorkflowService(ApplicationProperties properties, ObjectMapper objectMapper, RequirementSafetyPolicy requirementSafetyPolicy) {
 		this.properties = properties;
 		this.objectMapper = objectMapper;
+		this.requirementSafetyPolicy = requirementSafetyPolicy;
 	}
 
 	@PostConstruct
@@ -369,7 +370,7 @@ public class WorkflowService {
 
 	private WorkflowNode executeNode(WorkflowNode node, WorkflowState state) {
 		Instant now = Instant.now(clock);
-		if (node.type() == NodeType.SECURITY && containsUnsafeDirective(state.requirement())) {
+		if (node.type() == NodeType.SECURITY && requirementSafetyPolicy.containsUnsafeDirective(state.requirement())) {
 			throw new UnsafeWorkflowException("Security policy guardrail triggered for unsafe requirement content");
 		}
 
@@ -875,13 +876,6 @@ public class WorkflowService {
 			case AUDIT -> "Execution lineage, transitions, and artifact traceability recorded";
 			case FINAL_SUMMARY -> "Final engineering package assembled for human review";
 		};
-	}
-
-	private boolean containsUnsafeDirective(String requirement) {
-		String normalized = requirement.toLowerCase();
-		return Arrays.asList("disable auth", "bypass security", "drop production", "store passwords", "unsafe output")
-			.stream()
-			.anyMatch(normalized::contains);
 	}
 
 	private ObservabilityMetrics emptyMetrics() {

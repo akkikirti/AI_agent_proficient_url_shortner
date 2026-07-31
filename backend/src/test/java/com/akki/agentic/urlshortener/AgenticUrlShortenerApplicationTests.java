@@ -19,7 +19,9 @@ import java.net.http.HttpResponse;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
+import java.util.UUID;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -84,6 +86,59 @@ class AgenticUrlShortenerApplicationTests {
 		Assertions.assertNotNull(analyticsResponse.getBody());
 		Assertions.assertEquals(1, analyticsResponse.getBody().accessCount());
 		Assertions.assertEquals(1, analyticsResponse.getBody().recentAccesses().size());
+	}
+
+	@Test
+	void rejectsInvalidUrlRequests() {
+		ResponseEntity<String> response = restTemplate.postForEntity(
+			"/api/urls",
+			new CreateShortUrlRequest("ftp://invalid.example.com", "invalid-ftp", "Invalid", null),
+			String.class
+		);
+
+		Assertions.assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+	}
+
+	@Test
+	void rejectsDuplicateAliasWithConflict() {
+		String alias = "dup-" + UUID.randomUUID().toString().substring(0, 8);
+
+		ResponseEntity<ShortUrlResponse> first = restTemplate.postForEntity(
+			"/api/urls",
+			new CreateShortUrlRequest("https://example.com/first", alias, "First", null),
+			ShortUrlResponse.class
+		);
+		Assertions.assertEquals(HttpStatus.CREATED, first.getStatusCode());
+
+		ResponseEntity<String> second = restTemplate.postForEntity(
+			"/api/urls",
+			new CreateShortUrlRequest("https://example.com/second", alias, "Second", null),
+			String.class
+		);
+
+		Assertions.assertEquals(HttpStatus.CONFLICT, second.getStatusCode());
+	}
+
+	@Test
+	void returnsGoneAfterDeactivation() throws Exception {
+		String alias = "gone-" + UUID.randomUUID().toString().substring(0, 8);
+		ResponseEntity<ShortUrlResponse> createResponse = restTemplate.postForEntity(
+			"/api/urls",
+			new CreateShortUrlRequest("https://example.com/archive", alias, "Archive", null),
+			ShortUrlResponse.class
+		);
+		Assertions.assertEquals(HttpStatus.CREATED, createResponse.getStatusCode());
+
+		restTemplate.delete("/api/urls/" + alias);
+
+		HttpClient client = HttpClient.newBuilder().followRedirects(HttpClient.Redirect.NEVER).connectTimeout(Duration.ofSeconds(10)).build();
+		HttpRequest redirectRequest = HttpRequest.newBuilder()
+			.uri(URI.create("http://localhost:" + port + "/r/" + alias))
+			.GET()
+			.build();
+
+		HttpResponse<Void> redirectResponse = client.send(redirectRequest, HttpResponse.BodyHandlers.discarding());
+		Assertions.assertEquals(410, redirectResponse.statusCode());
 	}
 
 	@Test
@@ -178,6 +233,65 @@ class AgenticUrlShortenerApplicationTests {
 	}
 
 	@Test
+	void rejectsProtectedWorkflowExecutionWithoutAdminToken() {
+		WorkflowState workflow = createWorkflow("Execute protection test", ScenarioType.GREENFIELD);
+
+		ResponseEntity<String> response = restTemplate.postForEntity(
+			"/api/orchestrator/workflows/" + workflow.id() + "/execute",
+			new ExecuteWorkflowRequest(List.of()),
+			String.class
+		);
+
+		Assertions.assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
+	}
+
+	@Test
+	void returnsNotFoundForUnknownWorkflow() {
+		ResponseEntity<String> response = restTemplate.getForEntity("/api/orchestrator/workflows/missing-workflow-id", String.class);
+		Assertions.assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+	}
+
+	@Test
+	void returnsConflictWhenRollingBackWithoutSnapshot() {
+		WorkflowState workflow = createWorkflow("Rollback without history", ScenarioType.GREENFIELD);
+
+		ResponseEntity<String> rollbackResponse = restTemplate.exchange(
+			"/api/orchestrator/workflows/" + workflow.id() + "/rollback",
+			HttpMethod.POST,
+			new HttpEntity<>(new RollbackWorkflowRequest("No snapshot expected yet"), adminHeaders()),
+			String.class
+		);
+
+		Assertions.assertEquals(HttpStatus.CONFLICT, rollbackResponse.getStatusCode());
+	}
+
+	@Test
+	void rejectedApprovalSafeStopsWorkflow() {
+		WorkflowState workflow = createWorkflow("Approval rejection should stop execution", ScenarioType.BROWNFIELD);
+
+		workflow = restTemplate.exchange(
+			"/api/orchestrator/workflows/" + workflow.id() + "/execute",
+			HttpMethod.POST,
+			new HttpEntity<>(new ExecuteWorkflowRequest(List.of()), adminHeaders()),
+			WorkflowState.class
+		).getBody();
+
+		Assertions.assertNotNull(workflow);
+		String gateId = workflow.approvals().stream().filter(gate -> !gate.approved() && !gate.rejected()).findFirst().orElseThrow().id();
+
+		WorkflowState rejected = restTemplate.exchange(
+			"/api/orchestrator/workflows/" + workflow.id() + "/approvals/" + gateId,
+			HttpMethod.POST,
+			new HttpEntity<>(new ApprovalRequest("qa.lead", false, "Rejected for risk concerns"), adminHeaders()),
+			WorkflowState.class
+		).getBody();
+
+		Assertions.assertNotNull(rejected);
+		Assertions.assertEquals(WorkflowStatus.SAFE_STOPPED, rejected.status());
+		Assertions.assertTrue(rejected.safeStopReason().contains("Approval rejected"));
+	}
+
+	@Test
 	void safeStopsUnsafeWorkflowAfterProtectedExecution() {
 		CreateWorkflowRequest createRequest = new CreateWorkflowRequest(
 			"Agentic-url-shortner",
@@ -229,6 +343,27 @@ class AgenticUrlShortenerApplicationTests {
 		HttpHeaders headers = new HttpHeaders();
 		headers.add("X-Orchestrator-Token", ADMIN_TOKEN);
 		return headers;
+	}
+
+	private WorkflowState createWorkflow(String requirement, ScenarioType scenario) {
+		CreateWorkflowRequest createRequest = new CreateWorkflowRequest(
+			"Agentic-url-shortner",
+			requirement + " " + Instant.now(),
+			scenario,
+			List.of("Test constraint"),
+			List.of("Test acceptance")
+		);
+
+		ResponseEntity<WorkflowState> response = restTemplate.exchange(
+			"/api/orchestrator/workflows",
+			HttpMethod.POST,
+			new HttpEntity<>(createRequest, adminHeaders()),
+			WorkflowState.class
+		);
+
+		Assertions.assertEquals(HttpStatus.CREATED, response.getStatusCode());
+		Assertions.assertNotNull(response.getBody());
+		return response.getBody();
 	}
 
 	private static Path createRuntimeRoot() {
